@@ -84,22 +84,43 @@ architecture dataflow of multiplier is
 begin
 
 --- ENTER STUDENT CODE BELOW ---
+
+--- Flags:
+---     perform signed multiplication with 8 bit 
+---     numbers and corner conditions (0 and abs(128))
     A_IS_NEGATIVE <= A(7);
     B_IS_NEGATIVE <= B(7);
     A_IS_ZERO <= '1' when A = "00000000" else '0';
     B_IS_ZERO <= '1' when B = "00000000" else '0';
     A_IS_MAX <= '1' when A = "10000000" else '0';
     B_IS_MAX <= '1' when B = "10000000" else '0';
+--- Determine the sign of the result in the case of signed 8-bit multiplication.
     SCALAR_SIGN <= A(7) XOR B(7);
     
-    A_NEG <= '0' & not A(6 downto 0) when A_IS_NEGATIVE = '1' AND S = '1' else "00000000";
-    B_NEG <= '0' & not B(6 downto 0) when B_IS_NEGATIVE = '1' AND S = '1' else "00000000";
-    
+-- If we perform signed multiplication (S = '1'), we extract the absolute value, perform the multiplication, and
+-- then add the sign using 2's complement: A(7) XOR B(7) Two_Complement(|A|x|B|), where the sign is computed with A(7) XOR B(7).
+
+-- For signed multiplication between two 8-bit numbers, the first step is to find the absolute value of each input. 
+-- To do that, we need to consider two cases:
+--     1. If the input number is positive, zero, 128, or -128 (remember in bit representation, 128 = -128), then we use it as it is.
+--     2. If the input number is negative (except for ±128), then we use 2's complement. To compute 2's complement, we follow this approach:
+--         A. Invert all bits (except for the sign bit) using a NOT gate. Since a signed 8-bit number uses the MSB as the sign bit, the value is
+--            stored in the remaining 7 bits. So, we need to concatenate a 0 for the MSB to have the correct absolute value representation.
+--         B. Add 1 to the inverted result.
+
+    A_NEG <= '0' & not A(6 downto 0) when S = '1' AND A_IS_NEGATIVE = '1' else "00000000";
     ABS1: entity work.adder(dataflow) port map (A_NEG, "00000001", A_ABS, C_DUMMY1);
-    A_COPY <= A_ABS when A_IS_NEGATIVE = '1' AND S = '1' AND A_IS_MAX = '0' else A;
+    A_COPY <= A_ABS when S = '1' AND A_IS_NEGATIVE = '1' AND A_IS_MAX = '0' else A; -- Here we evalute case 1 vs case 2
     
+    B_NEG <= '0' & not B(6 downto 0) when S = '1' AND B_IS_NEGATIVE = '1' else "00000000";
     ABS2: entity work.adder(dataflow) port map (B_NEG, "00000001", B_ABS, C_DUMMY2);
-    B_COPY <= B_ABS when B_IS_NEGATIVE = '1' AND S = '1' AND B_IS_MAX = '0' else B;
+    B_COPY <= B_ABS when S = '1' AND B_IS_NEGATIVE = '1' AND B_IS_MAX = '0' else B; -- Here we evalute case 1 vs case 2
+
+--- Here we perform unsigned multiplication (S = '0') or signed multiplication (S = '1') with the absolute value version of input numbers 
+--- that actually follow the same process as the unsigned case. The process is as follows:
+---     1. Compute partial products with an AND gate between each bit from the B input and each bit from the A input.
+---     2. Perform the addition of each partial product, taking into account the 1-position shift to the left at each partial addition.
+---  Important note: Propagate the carry after each addition, except for the first addition, since the carry is 0 (no previous additions).
 
     Y_COPY(0) <= A_COPY(0) AND B_COPY(0);
 
@@ -137,8 +158,29 @@ begin
     B7 <= A_COPY when B_COPY(7) = '1' else "00000000";
     X7: entity work.adder(dataflow) port map (A7, B7, S7, C7);
     Y_COPY(14 downto 7) <= S7;
+    
+--- Decide the value of the MSB bit of the result based on the following two cases:
+---     1. Unsigned multiplication: Set MSB equal to the carry of the last addition (C7 for 8-bit inputs).
+---     2. Signed multiplication: 
+---         A. If A is not zero and B is not zero, then set MSB equal to A(7) XOR B(7) (Reasoning: if A = 0 and B = -1, then A(7) XOR B(7) = 1, 
+---            which is incorrect; the sign should be 0 for a multiplication with 0).
+---         B. If A = 0 or B = 0, set MSB equal to the carry of the last addition (Reasoning: We already manage multiplication with 0, and the carry will be
+---            the same for either unsigned or signed multiplication).
+
     Y_COPY(15) <= SCALAR_SIGN when S = '1' AND A_IS_ZERO = '0' AND B_IS_ZERO = '0' else C7;
     
+--- To set the final result, we need to decide between two cases:
+---     1. Unsigned multiplication or signed multiplication when the result is positive or zero (we know the result is zero if any of the inputs is zero): Set Y equal to Y_COPY.
+---     2. Signed multiplication: Set the MSB of Y equal to the MSB of Y_COPY and use 2's complement for the remaining bits. To compute 2's complement, we follow this approach:
+---         A. Invert all bits (except for the sign bit) using a NOT gate. Since a signed 16-bit number uses the MSB as the sign bit, the value is
+---            stored in the remaining 15 bits. So, we need to concatenate a 0 for the MSB and then invert the bits.
+---         B. Add 1 to the inverted result: 
+---            Since our adder only supports 8-bit inputs, we need to perform the whole addition in three steps:
+---                 i. Add the first 8 LSB bits of the two inputs.
+---                 ii. Manage the carry by concatenating it to the LSB of the upper part of the 1 representation.
+---                 iii. Add the MSB of both quantities, taking into account the carry correction above.
+
+
     Y_NEG <= not('0' & Y_COPY(14 downto 0)) when S = '1' else "0000000000000000";
     
     ABS3: entity work.adder(dataflow) port map (Y_NEG(7 downto 0), "00000001", Y_ABS_LSB, C_Y);
