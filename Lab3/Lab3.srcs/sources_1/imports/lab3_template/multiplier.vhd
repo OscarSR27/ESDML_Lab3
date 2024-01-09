@@ -81,7 +81,7 @@ architecture dataflow of multiplier is
 
 -- SIGNALS
 --- ENTER STUDENT CODE BELOW ---
-    signal Y_COPY,Y_NEG: BIT_VECTOR(15 downto 0);
+    signal Y_COPY,Y_NEG, Y_VECTOR: BIT_VECTOR(15 downto 0);
     signal A_COPY, B_COPY, A_NEG, B_NEG, A_ABS, B_ABS, Y_ABS_MSB, Y_ABS_LSB, Y_CARRY_TERM, A1, B1, A2, B2, A3, B3, A4, B4, A5, B5, A6, B6, A7, B7: BIT_VECTOR(7 downto 0);
     signal S1, S2, S3, S4, S5, S6, S7: BIT_VECTOR(7 downto 0);
     signal C1, C2, C3, C4, C5, C6, C7, C_DUMMY1, C_DUMMY2, C_DUMMY3, C_Y: BIT;
@@ -130,41 +130,51 @@ begin
 ---  Important note: Propagate the carry after each addition, except for the first addition, since the carry is 0 (no previous additions).
 
     Y_COPY(0) <= A_COPY(0) AND B_COPY(0);
+    Y_VECTOR(0) <= A_COPY(0) AND B_COPY(0);
 
-    A1 <= '0' & A_COPY(7 downto 1) when B_COPY(0) = '1' else "00000000";
-    B1 <= A_COPY when B_COPY(1) = '1' else "00000000";
+    A1 <= '0' & A_COPY(7 downto 1) when B_COPY(0) = '1' AND V = '0' else "00000" & A_COPY(3 downto 1) when B_COPY(0) = '1' AND V = '1' else "00000000";
+    B1 <= A_COPY when B_COPY(1) = '1' AND V = '0' else "0000" & A_COPY(3 downto 0) when B_COPY(1) = '1' AND V = '1' else "00000000";
     X1: entity work.adder(dataflow) port map (A1, B1, S1, C1);
     Y_COPY(1) <= S1(0);
+    Y_VECTOR(1) <= S1(0);
     
     A2 <= C1 & S1(7 downto 1);
-    B2 <= A_COPY when B_COPY(2) = '1' else "00000000";
+    B2 <= A_COPY when B_COPY(2) = '1' AND V = '0' else "0000" & A_COPY(3 downto 0) when B_COPY(2) = '1' AND V = '1' else "00000000";
     X2: entity work.adder(dataflow) port map (A2, B2, S2, C2);
     Y_COPY(2) <= S2(0);
+    Y_VECTOR(2) <= S2(0);
     
     A3 <= C2 & S2(7 downto 1);
-    B3 <= A_COPY when B_COPY(3) = '1' else "00000000";
+    B3 <= A_COPY when B_COPY(3) = '1' AND V = '0' else "0000" & A_COPY(3 downto 0) when B_COPY(3) = '1' AND V = '1' else "00000000";
     X3: entity work.adder(dataflow) port map (A3, B3, S3, C3);
     Y_COPY(3) <= S3(0);
+    Y_VECTOR(6 downto 3) <= S3(3 downto 0);
+    Y_VECTOR(7) <= C3;
     
     A4 <= C3 & S3(7 downto 1);
     B4 <= A_COPY when B_COPY(4) = '1' else "00000000";
     X4: entity work.adder(dataflow) port map (A4, B4, S4, C4);
     Y_COPY(4) <= S4(0);
+    Y_VECTOR(8) <= A_COPY(4) AND B_COPY(4);
     
-    A5 <= C4 & S4(7 downto 1);
-    B5 <= A_COPY when B_COPY(5) = '1' else "00000000";
+    A5 <= C4 & S4(7 downto 1) when V = '0' else "00000" & A_COPY(7 downto 5) when B_COPY(4) = '1' AND V = '1' else "00000000";
+    B5 <= A_COPY when B_COPY(5) = '1' AND V = '0' else "0000" & A_COPY(7 downto 4) when B_COPY(5) = '1' AND V = '1' else "00000000";
     X5: entity work.adder(dataflow) port map (A5, B5, S5, C5);
     Y_COPY(5) <= S5(0);
+    Y_VECTOR(9) <= S5(0);
     
     A6 <= C5 & S5(7 downto 1);
-    B6 <= A_COPY when B_COPY(6) = '1' else "00000000";
+    B6 <= A_COPY when B_COPY(6) = '1' AND V = '0' else "0000" & A_COPY(7 downto 4) when B_COPY(6) = '1' AND V = '1' else "00000000";
     X6: entity work.adder(dataflow) port map (A6, B6, S6, C6);
     Y_COPY(6) <= S6(0);
+    Y_VECTOR(10) <= S6(0);
     
     A7 <= C6 & S6(7 downto 1);
-    B7 <= A_COPY when B_COPY(7) = '1' else "00000000";
+    B7 <= A_COPY when B_COPY(7) = '1' AND V = '0' else "0000" & A_COPY(7 downto 4) when B_COPY(7) = '1' AND V = '1' else "00000000";
     X7: entity work.adder(dataflow) port map (A7, B7, S7, C7);
     Y_COPY(14 downto 7) <= S7;
+    Y_VECTOR(14 downto 11) <= S7(3 downto 0);
+    Y_VECTOR(15) <= C6;
     
 --- Decide the value of the MSB bit of the result based on the following two cases:
 ---     1. Unsigned multiplication: Set MSB equal to the carry of the last addition (C7 for 8-bit inputs).
@@ -193,8 +203,7 @@ begin
     ABS3: entity work.adder(dataflow) port map (Y_NEG(7 downto 0), "00000001", Y_ABS_LSB, C_Y);
     Y_CARRY_TERM <= "0000000" & C_Y;
     ABS4: entity work.adder(dataflow) port map (Y_NEG(15 downto 8), Y_CARRY_TERM, Y_ABS_MSB, C_DUMMY3);
-    Y <= Y_COPY(15) & Y_ABS_MSB(6 downto 0) & Y_ABS_LSB when S = '1' AND SCALAR_SIGN = '1' AND A_IS_ZERO = '0' AND B_IS_ZERO = '0' else Y_COPY;
-
+    Y <= Y_COPY(15) & Y_ABS_MSB(6 downto 0) & Y_ABS_LSB when S = '1' AND SCALAR_SIGN = '1' AND A_IS_ZERO = '0' AND B_IS_ZERO = '0' else Y_COPY when V = '0' else Y_VECTOR;
 --- ENTER STUDENT CODE ABOVE ---
 
 end dataflow;
