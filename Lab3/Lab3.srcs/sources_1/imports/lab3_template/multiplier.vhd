@@ -41,25 +41,32 @@ end adder;
 architecture dataflow of adder is
     signal a_and_b, a_xor_b, abc, c: bit_vector(7 downto 0);
 begin
+    --- Perform bit by bit addition
     g1: for i in 0 to 7 generate
-        a_and_b(i) <= a(i) AND b(i);
-        a_xor_b(i) <= a(i) XOR b(i);
+        a_and_b(i) <= a(i) AND b(i); --- Compute carry from the two inputs bits
+        a_xor_b(i) <= a(i) XOR b(i); --- Compute addition between input A(i) and B(i)
 
-        g2: if i = 0 generate
-            -- half adder
+        g2: if i = 0 generate  --- The LSB bit can use a half adder (no extra gates are needed to compute the carry or the addition)
+                               --- since there are no previous additions that could affect the result.
+
+            --- half adder
             y(i) <= a_xor_b(i);
             c(i) <= a_and_b(i);
         end generate g2;
 
         g3: if i /= 0 generate
-            -- full adder
+            --- full adder
+            --- The remaining bits require a full adder for two reasons:
+            ---     1. The output carry needs to consider all other forms in which it can be produced, i.e., due to A(i) + B(i) or (A(i) + B(i)) + Input carry(i).
+            ---     2. The final addition between bits needs to consider the input carry, so an extra XOR operation is needed between A(i) + B(i) and the input carry.
+
             abc(i) <= c(i-1) AND a_xor_b(i);
             y(i) <= c(i-1) XOR a_xor_b(i);
             c(i) <= a_and_b(i) OR abc(i);
         end generate g3;
     end generate g1;
 
-    CO <= c(7);
+    CO <= c(7); --- Assign final carry to C0
 end dataflow;
 
 entity multiplier is
