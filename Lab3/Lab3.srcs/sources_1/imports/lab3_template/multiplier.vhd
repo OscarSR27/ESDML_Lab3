@@ -92,20 +92,8 @@ begin
     B_IS_MAX <= '1' when B = "10000000" else '0';
     SCALAR_SIGN <= A(7) XOR B(7);
     
-    process (A, B, S)
-    begin
-        if A_IS_NEGATIVE = '1' AND S = '1' then
-            A_NEG <= '0' & not A(6 downto 0);
-        else
-            A_NEG <= "00000000";
-        end if;
-        
-        if B_IS_NEGATIVE = '1' AND S = '1' then
-            B_NEG <= '0' & not B(6 downto 0);
-        else
-            B_NEG <= "00000000";
-        end if;
-    end process;
+    A_NEG <= '0' & not A(6 downto 0) when A_IS_NEGATIVE = '1' AND S = '1' else "00000000";
+    B_NEG <= '0' & not B(6 downto 0) when B_IS_NEGATIVE = '1' AND S = '1' else "00000000";
     
     ABS1: entity work.adder(dataflow) port map (A_NEG, "00000001", A_ABS, C_DUMMY1);
     A_COPY <= A_ABS when A_IS_NEGATIVE = '1' AND S = '1' AND A_IS_MAX = '0' else A;
@@ -151,14 +139,7 @@ begin
     Y_COPY(14 downto 7) <= S7;
     Y_COPY(15) <= SCALAR_SIGN when S = '1' AND A_IS_ZERO = '0' AND B_IS_ZERO = '0' else C7;
     
-    process (A, B, S, Y_COPY)
-    begin
-        if S = '1' then
-            Y_NEG <= not('0' & Y_COPY(14 downto 0));
-        else
-            Y_NEG <= "0000000000000000";
-        end if;
-    end process;
+    Y_NEG <= not('0' & Y_COPY(14 downto 0)) when S = '1' else "0000000000000000";
     
     ABS3: entity work.adder(dataflow) port map (Y_NEG(7 downto 0), "00000001", Y_ABS_LSB, C_Y);
     Y_CARRY_TERM <= "0000000" & C_Y;
