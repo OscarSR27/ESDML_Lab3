@@ -44,7 +44,7 @@ begin
 --- ENTER STUDENT CODE BELOW ---
     process
     begin
-        S <= '0'; V <= '0';
+        S <= '1'; V <= '0';
         for AI in 0 to 2**8-1 loop
             A <= bit_vector(to_unsigned(AI, 8));
             for BI in 0 to 2**8-1 loop
