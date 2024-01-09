@@ -151,7 +151,7 @@ begin
     Y_COPY(14 downto 7) <= S7;
     Y_COPY(15) <= SCALAR_SIGN when S = '1' AND A_IS_ZERO = '0' AND B_IS_ZERO = '0' else C7;
     
-    process (Y_COPY)
+    process (A, B, S, Y_COPY)
     begin
         if S = '1' then
             Y_NEG <= not('0' & Y_COPY(14 downto 0));
