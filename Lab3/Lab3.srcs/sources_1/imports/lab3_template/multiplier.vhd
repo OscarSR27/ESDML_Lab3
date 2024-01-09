@@ -78,7 +78,7 @@ architecture dataflow of multiplier is
     signal A_COPY, B_COPY, A_NEG, B_NEG, A_ABS, B_ABS, Y_ABS_MSB, Y_ABS_LSB, Y_CARRY_TERM, A1, B1, A2, B2, A3, B3, A4, B4, A5, B5, A6, B6, A7, B7: BIT_VECTOR(7 downto 0);
     signal S1, S2, S3, S4, S5, S6, S7: BIT_VECTOR(7 downto 0);
     signal C1, C2, C3, C4, C5, C6, C7, C_DUMMY1, C_DUMMY2, C_DUMMY3, C_Y: BIT;
-    signal A_IS_ZERO, B_IS_ZERO, A_IS_NEGATIVE, B_IS_NEGATIVE, SCALAR_SIGN: BIT;
+    signal A_IS_ZERO, B_IS_ZERO, A_IS_MAX, B_IS_MAX, A_IS_NEGATIVE, B_IS_NEGATIVE, SCALAR_SIGN: BIT;
 --- ENTER STUDENT CODE ABOVE ---
 
 begin
@@ -88,28 +88,30 @@ begin
     B_IS_NEGATIVE <= B(7);
     A_IS_ZERO <= '1' when A = "00000000" else '0';
     B_IS_ZERO <= '1' when B = "00000000" else '0';
+    A_IS_MAX <= '1' when A = "10000000" else '0';
+    B_IS_MAX <= '1' when B = "10000000" else '0';
     SCALAR_SIGN <= A(7) XOR B(7);
     
     process (A, B, S)
     begin
         if A_IS_NEGATIVE = '1' AND S = '1' then
-            A_NEG <= "0" & not A(6 downto 0);
+            A_NEG <= '0' & not A(6 downto 0);
         else
             A_NEG <= "00000000";
         end if;
         
         if B_IS_NEGATIVE = '1' AND S = '1' then
-            B_NEG <= "0" & not B(6 downto 0);
+            B_NEG <= '0' & not B(6 downto 0);
         else
             B_NEG <= "00000000";
         end if;
     end process;
     
     ABS1: entity work.adder(dataflow) port map (A_NEG, "00000001", A_ABS, C_DUMMY1);
-    A_COPY <= A_ABS when A_IS_NEGATIVE = '1' AND S = '1' else A;
+    A_COPY <= A_ABS when A_IS_NEGATIVE = '1' AND S = '1' AND A_IS_MAX = '0' else A;
     
     ABS2: entity work.adder(dataflow) port map (B_NEG, "00000001", B_ABS, C_DUMMY2);
-    B_COPY <= B_ABS when B_IS_NEGATIVE = '1' AND S = '1' else B;
+    B_COPY <= B_ABS when B_IS_NEGATIVE = '1' AND S = '1' AND B_IS_MAX = '0' else B;
 
     Y_COPY(0) <= A_COPY(0) AND B_COPY(0);
 
