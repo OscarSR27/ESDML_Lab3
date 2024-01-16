@@ -68,6 +68,12 @@ begin
 
     CO <= c(7); --- Assign final carry to C0
 end dataflow;
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+
+-- Uncomment the following library declaration if using
+-- arithmetic functions with Signed or Unsigned values
+USE IEEE.NUMERIC_BIT.ALL;
 
 entity multiplier is
     Port ( A : in BIT_VECTOR (7 downto 0);
@@ -75,6 +81,8 @@ entity multiplier is
            S : in BIT;
            V : in BIT;
            Y : out BIT_VECTOR (15 downto 0));
+           --C1t,C2t,C3t: out BIT;
+           --A1t,A2t,A3t,B1t,B2t,B3t,S1t,S2t,S3t: out BIT_VECTOR (7 downto 0));
 end multiplier;
 
 architecture dataflow of multiplier is
@@ -137,19 +145,31 @@ begin
     X1: entity work.adder(dataflow) port map (A1, B1, S1, C1);
     Y_COPY(1) <= S1(0);
     Y_VECTOR(1) <= S1(0);
+--    A1t <= A1;
+--    B1t <= B1;
+--    S1t <= S1;
+--    C1t <= C1;
     
-    A2 <= C1 & S1(7 downto 1);
+    A2 <= C1 & S1(7 downto 1) when V = '0' else S1(4) & S1(7 downto 1);
     B2 <= A_COPY when B_COPY(2) = '1' AND V = '0' else "0000" & A_COPY(3 downto 0) when B_COPY(2) = '1' AND V = '1' else "00000000";
     X2: entity work.adder(dataflow) port map (A2, B2, S2, C2);
     Y_COPY(2) <= S2(0);
     Y_VECTOR(2) <= S2(0);
+--    A2t <= A2;
+--    B2t <= B2;
+--    S2t <= S2;
+--    C2t <= C2;
     
-    A3 <= C2 & S2(7 downto 1);
+    A3 <= C2 & S2(7 downto 1) when V = '0' else S2(4) & S2(7 downto 1);
     B3 <= A_COPY when B_COPY(3) = '1' AND V = '0' else "0000" & A_COPY(3 downto 0) when B_COPY(3) = '1' AND V = '1' else "00000000";
     X3: entity work.adder(dataflow) port map (A3, B3, S3, C3);
     Y_COPY(3) <= S3(0);
     Y_VECTOR(6 downto 3) <= S3(3 downto 0);
-    Y_VECTOR(7) <= C3;
+    Y_VECTOR(7) <= S3(4);
+--    A3t <= A3;
+--    B3t <= B3;
+--    S3t <= S3;
+--    C3t <= C3;
     
     A4 <= C3 & S3(7 downto 1);
     B4 <= A_COPY when B_COPY(4) = '1' else "00000000";
@@ -163,18 +183,18 @@ begin
     Y_COPY(5) <= S5(0);
     Y_VECTOR(9) <= S5(0);
     
-    A6 <= C5 & S5(7 downto 1);
+    A6 <= C5 & S5(7 downto 1) when V = '0' else S5(4) & S5(7 downto 1);
     B6 <= A_COPY when B_COPY(6) = '1' AND V = '0' else "0000" & A_COPY(7 downto 4) when B_COPY(6) = '1' AND V = '1' else "00000000";
     X6: entity work.adder(dataflow) port map (A6, B6, S6, C6);
     Y_COPY(6) <= S6(0);
     Y_VECTOR(10) <= S6(0);
     
-    A7 <= C6 & S6(7 downto 1);
+    A7 <= C6 & S6(7 downto 1) when V = '0' else S6(4) & S6(7 downto 1);
     B7 <= A_COPY when B_COPY(7) = '1' AND V = '0' else "0000" & A_COPY(7 downto 4) when B_COPY(7) = '1' AND V = '1' else "00000000";
     X7: entity work.adder(dataflow) port map (A7, B7, S7, C7);
     Y_COPY(14 downto 7) <= S7;
     Y_VECTOR(14 downto 11) <= S7(3 downto 0);
-    Y_VECTOR(15) <= C6;
+    Y_VECTOR(15) <= S7(4);
     
 --- Decide the value of the MSB bit of the result based on the following two cases:
 ---     1. Unsigned multiplication: Set MSB equal to the carry of the last addition (C7 for 8-bit inputs).
@@ -211,18 +231,18 @@ end dataflow;
 
 
 ---- Behavioral architecture of the array multiplier, can be used as reference during verification --
---architecture behavioral of multiplier is
+architecture behavioral of multiplier is
 
---begin
+begin
 
---Y <= BIT_VECTOR( unsigned(A) * unsigned(B) )
---        when s ='0' AND v = '0' else
---     BIT_VECTOR( signed(A) * signed(B) )
---        when s ='1' AND v = '0' else
---     BIT_VECTOR( unsigned(A(7 downto 4)) * unsigned(B(7 downto 4)) ) &
---     BIT_VECTOR( unsigned(A(3 downto 0)) * unsigned(B(3 downto 0)) )
---        when s ='0' AND v = '1' else
---     BIT_VECTOR( signed(A(7 downto 4)) * signed(B(7 downto 4)) ) &
---     BIT_VECTOR( signed(A(3 downto 0)) * signed(B(3 downto 0)) );
+Y <= BIT_VECTOR( unsigned(A) * unsigned(B) )
+        when s ='0' AND v = '0' else
+     BIT_VECTOR( signed(A) * signed(B) )
+        when s ='1' AND v = '0' else
+     BIT_VECTOR( unsigned(A(7 downto 4)) * unsigned(B(7 downto 4)) ) &
+     BIT_VECTOR( unsigned(A(3 downto 0)) * unsigned(B(3 downto 0)) )
+        when s ='0' AND v = '1' else
+     BIT_VECTOR( signed(A(7 downto 4)) * signed(B(7 downto 4)) ) &
+     BIT_VECTOR( signed(A(3 downto 0)) * signed(B(3 downto 0)) );
 
---end behavioral;
+end behavioral;

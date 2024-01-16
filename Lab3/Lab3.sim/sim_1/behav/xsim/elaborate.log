@@ -11,7 +11,8 @@ Compiling package std.standard
 Compiling package std.textio
 Compiling package ieee.std_logic_1164
 Compiling package ieee.numeric_bit
+Compiling architecture behavioral of entity xil_defaultlib.multiplier [multiplier_default_uniq_0]
 Compiling architecture dataflow of entity xil_defaultlib.adder [adder_default]
-Compiling architecture dataflow of entity xil_defaultlib.multiplier [multiplier_default]
+Compiling architecture dataflow of entity xil_defaultlib.multiplier [multiplier_default_uniq_1]
 Compiling architecture behavioral of entity xil_defaultlib.tb_multiplier
 Built simulation snapshot tb_multiplier_behav
