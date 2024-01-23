@@ -47,16 +47,27 @@ begin
 --- ENTER STUDENT CODE BELOW ---
     process
     begin
-        S <= '1'; V <= '0';
-        for AI in 0 to 2**8-1 loop
-            A <= bit_vector(to_unsigned(AI, 8));
-            for BI in 0 to 2**8-1 loop
-                B <= bit_vector(to_unsigned(BI, 8));
-                wait for 1 ns;
-                assert Y1 = Y2;
+        for SV in 0 to 3 loop
+        case SV is
+            when 0 =>
+                S <= '0'; V <= '0';
+            when 1 =>
+                S <= '0'; V <= '1';
+            when 2 =>
+                S <= '1'; V <= '0';
+            --when 3 =>
+                --S <= '1'; V <= '1';
+        end case;
+            for AI in 0 to 2**8-1 loop
+                A <= bit_vector(to_unsigned(AI, 8));
+                for BI in 0 to 2**8-1 loop
+                    B <= bit_vector(to_unsigned(BI, 8));
+                    wait for 1 ns;
+                    assert Y1 = Y2;
+                end loop;
             end loop;
-        end loop;
-        wait;
+         end loop;
+         wait;
     end process;
 
 UUT1: entity work.multiplier(behavioral) port map(A => A, B => B, S => S, V => V, Y => Y1); -- Complete port map!
