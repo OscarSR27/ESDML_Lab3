@@ -1,6 +1,6 @@
 ----------------------------------------------------------------------------------
 -- Company:
--- Engineer:
+-- Engineer: Le, Thien N and Soto, Oscar
 --
 -- Create Date: 07/10/2023 04:04:01 PM
 -- Design Name:
@@ -98,20 +98,14 @@ architecture dataflow of multiplier is
 begin
 
 --- ENTER STUDENT CODE BELOW ---
---- While the explanation and comments within the script are based on 8-bit inputs for both signed and 
---- unsigned multiplication, the code is adaptable to handle 4-bit inputs. This is achieved by treating 
---- each 4-bit input as part of separate 8-bit inputs, where for a given 8-bit input, the lower 4 bits (LSB) 
---- are treated as Input0 and the upper 4 bits (MSB) as Input1, both for A and B inputs. This approach allows 
---- the code to maintain its core functionality and structure while being flexible to accommodate different 
---- input sizes.
 
 --- Flags:
----     perform signed multiplication with 8 bit 
----     numbers and corner conditions (0 and abs(128))
+--- Set a flag when A or B inputs are negatives (both scalar and vector format)
     A_IS_NEGATIVE <= A(7) & '0' when V = '0' else
                      A(7) & A(3);
     B_IS_NEGATIVE <= B(7) & '0' when V = '0' else
                      B(7) & B(3);
+--- Set a flag when A or B inputs are 0 (both scalar and vector format)
     A_IS_ZERO <= "11" when A = "00000000"  else 
                  "10" when V = '1' AND A(7 downto 4)  = "0000" AND A(3 downto 0) /= "0000" else
                  "01" when V = '1' AND A(7 downto 4) /= "0000" AND A(3 downto 0)  = "0000" else
@@ -120,6 +114,7 @@ begin
                  "10" when V = '1' AND B(7 downto 4)  = "0000" AND B(3 downto 0) /= "0000" else
                  "01" when V = '1' AND B(7 downto 4) /= "0000" AND B(3 downto 0)  = "0000" else
                  "00";
+--- Set a flag when A or B inputs are intended to be signed numbers and have maximum value (8 for vectors and 128 for scalars)
     A_IS_MAX <= "11" when (V = '0' AND A = "10000000") OR (V = '1' AND A(7 downto 4) = "1000" AND A(3 downto 0) = "1000") else 
                 "01" when  V = '1' AND A(7 downto 4) /= "1000" AND A(3 downto 0) = "1000" else
                 "10" when  V = '1' AND A(7 downto 4) = "1000" AND A(3 downto 0) /= "1000" else
@@ -129,12 +124,15 @@ begin
                 "10" when  V = '1' AND B(7 downto 4) = "1000" AND B(3 downto 0) /= "1000" else
                 "00";
 
---- Determine the sign of the result in the case of signed 8-bit multiplication.
-    SCALAR_SIGN <= (A(7) XOR B(7)) when V = '0' AND A_IS_ZERO /= "11" AND B_IS_ZERO /= "11" else '0' when V = '0';
-    
+--- Determine the sign of the result in case of signed 8-bit multiplication.
+    SCALAR_SIGN <= (A(7) XOR B(7)) when A_IS_ZERO /= "11" AND B_IS_ZERO /= "11" else '0';
+
+--- Determine the sign of the result in the case of signed vector 4-bit multiplication.
     VECTOR_SIGN(1) <= (A(7) XOR B(7)) when A_IS_ZERO(1) /= '1' AND B_IS_ZERO(1) /= '1' else '0';
     VECTOR_SIGN(0) <= (A(3) XOR B(3)) when A_IS_ZERO(0) /= '1' AND B_IS_ZERO(0) /= '1' else '0';
-    
+ 
+--- Below is the explanation on how to compute two complement. In the approach implemented here, it is required to add a 1 to the absolute value (abs) of a 
+--- negative number. Then, below signals are used to decide wether we need to add a 1 to the abs value or not
     TWO_COMPLEMENT_ADD_A <= "0000000" & A(7) when V = '0' AND S = '1' else
                             "000" & A(7) & "000" & A(3) when V = '1' AND S = '1' else
                             "00000000";
@@ -142,16 +140,24 @@ begin
     TWO_COMPLEMENT_ADD_B <= "0000000" & B(7) when V = '0' AND S = '1' else
                             "000" & B(7) & "000" & B(3) when V = '1' AND S = '1' else
                             "00000000";
-    
+
+--- While the explanation and comments within the script are based on 8-bit inputs for both signed and 
+--- unsigned multiplication, the code is adaptable to handle 4-bit inputs. This is achieved by treating 
+--- each 4-bit input as part of separate 8-bit inputs, where for a given 8-bit input, the lower 4 bits (LSB) 
+--- are treated as Input0 and the upper 4 bits (MSB) as Input1, both for A and B inputs. This approach allows 
+--- the code to maintain its core functionality and structure while being flexible to accommodate different 
+--- input sizes.
+
 -- If we perform signed multiplication (S = '1'), we extract the absolute value, perform the multiplication, and
--- then add the sign using 2's complement: A(7) XOR B(7) Two_Complement(|A|x|B|), where the sign is computed with A(7) XOR B(7).
+-- then add the sign using 2's complement: Two_Complement(|A|x|B|), where the sign is computed with A(7) XOR B(7).
 
 -- For signed multiplication between two 8-bit numbers, the first step is to find the absolute value of each input. 
 -- To do that, we need to consider two cases:
---     1. If the input number is positive, zero, 128, or -128 (remember in bit representation, 128 = -128), then we use it as it is.
---     2. If the input number is negative (except for ±128), then we use 2's complement. To compute 2's complement, we follow this approach:
---         A. Invert all bits (except for the sign bit) using a NOT gate. Since a signed 8-bit number uses the MSB as the sign bit, the value is
---            stored in the remaining 7 bits. So, we need to concatenate a 0 for the MSB to have the correct absolute value representation.
+--     1. If the input number is positive, zero, or ±128/±8 (max value in sign representation, remember in bit representation, 128 = -128, 8 = -8), 
+--        then we use it as it is.
+--     2. If the input number is negative (except for -128/-8), then we use 2's complement. To compute 2's complement, we follow this approach:
+--         A. Invert all bits (except for the sign bit) using a NOT gate. Since a signed number uses the MSB as the sign bit, the value is
+--            stored in the remaining bits. So, we need to concatenate a 0 for the MSB to have the correct absolute value representation.
 --         B. Add 1 to the inverted result.
 
    A_NEG <= '0' & not A(6 downto 0) when S = '1' AND V = '0' AND A_IS_NEGATIVE(1) = '1' else
@@ -175,6 +181,7 @@ begin
 ---     1. Compute partial products with an AND gate between each bit from the B input and each bit from the A input.
 ---     2. Perform the addition of each partial product, taking into account the 1-position shift to the left at each partial addition.
 ---  Important note: Propagate the carry after each addition, except for the first addition, since the carry is 0 (no previous additions).
+---  We create two copies of the signal to manage scalar (Y_COPY) or vector (Y_VECTOR) multiplication
 
     Y_COPY(0) <= A_COPY(0) AND B_COPY(0);
     Y_VECTOR(0) <= A_COPY(0) AND B_COPY(0);
@@ -196,7 +203,7 @@ begin
     X3: entity work.adder(dataflow) port map (A3, B3, S3, C3);
     Y_COPY(3) <= S3(0);
     Y_VECTOR(6 downto 3) <= S3(3 downto 0);
-    Y_VECTOR(7) <= VECTOR_SIGN(0) when S = '1' AND V = '1' else S3(4);
+    Y_VECTOR(7) <= VECTOR_SIGN(0) when S = '1' else S3(4);--Sign/MSB bit for vector case
     
     A4 <= C3 & S3(7 downto 1);
     B4 <= A_COPY when B_COPY(4) = '1' else "00000000";
@@ -220,29 +227,23 @@ begin
     B7 <= A_COPY when B_COPY(7) = '1' AND V = '0' else "0000" & A_COPY(7 downto 4) when B_COPY(7) = '1' AND V = '1' else "00000000";
     X7: entity work.adder(dataflow) port map (A7, B7, S7, C7);
     Y_COPY(14 downto 7) <= S7;
-    Y_VECTOR(14 downto 11) <= S7(3 downto 0);
-    Y_VECTOR(15) <= VECTOR_SIGN(1) when S = '1' AND V = '1' else S7(4);
+    Y_COPY(15) <= SCALAR_SIGN when S = '1' else C7;--Sign/MSB bit for scalar case
     
---- Decide the value of the MSB bit of the result based on the following two cases:
----     1. Unsigned multiplication: Set MSB equal to the carry of the last addition (C7 for 8-bit inputs).
----     2. Signed multiplication: 
----         A. If A is not zero and B is not zero, then set MSB equal to A(7) XOR B(7) (Reasoning: if A = 0 and B = -1, then A(7) XOR B(7) = 1, 
----            which is incorrect; the sign should be 0 for a multiplication with 0).
----         B. If A = 0 or B = 0, set MSB equal to the carry of the last addition (Reasoning: We already manage multiplication with 0, and the carry will be
----            the same for either unsigned or signed multiplication).
-
-    Y_COPY(15) <= SCALAR_SIGN when S = '1' AND A_IS_ZERO /= "11" AND B_IS_ZERO /= "11" else C7;
+    Y_VECTOR(14 downto 11) <= S7(3 downto 0);
+    Y_VECTOR(15) <= VECTOR_SIGN(1) when S = '1' else S7(4);--Sign/MSB bit for vector case
+    
     
 --- To set the final result, we need to decide between two cases:
 ---     1. Unsigned multiplication or signed multiplication when the result is positive or zero (we know the result is zero if any of the inputs is zero): Set Y equal to Y_COPY.
----     2. Signed multiplication: Set the MSB of Y equal to the MSB of Y_COPY and use 2's complement for the remaining bits. To compute 2's complement, we follow this approach:
----         A. Invert all bits (except for the sign bit) using a NOT gate. Since a signed 16-bit number uses the MSB as the sign bit, the value is
----            stored in the remaining 15 bits. So, we need to concatenate a 0 for the MSB and then invert the bits.
+---     2. Signed multiplication: Set the MSB of Y equal to the MSB of Y_COPY (or Y_VECTOR in case we use vector inputs) and use 2's complement for the remaining bits. To compute 2's complement, we follow this approach:
+---         A. Invert all bits (except for the sign bit) using a NOT gate. Since a signed number uses the MSB as the sign bit, the value is
+---            stored in the remaining bits. So, we need to concatenate a 0 for the MSB and then invert the bits.
 ---         B. Add 1 to the inverted result: 
 ---            Since our adder only supports 8-bit inputs, we need to perform the whole addition in three steps:
----                 i. Add the first 8 LSB bits of the two inputs.
----                 ii. Manage the carry by concatenating it to the LSB of the upper part of the 1 representation.
----                 iii. Add the MSB of both quantities, taking into account the carry correction above.
+---                 i. Add the first 8 LSB bits of the two inputs (the first input is the multiplication result and the second input is 1).
+---                 ii. For scalar multiplication: You need to add the upper 8 MSB with the carry resulted from the first addition, then create the second term by concatenating 7 zeros and the carry bit
+---                     For vector multiplication: The upper 8 MSB are an independent quantity since this is vector multiplication, we need to add 1 as well, so the second term is just a 1
+---                 iii. Add the MSB of both quantities, taking into account above considerations.
 
 
     Y_NEG <= not('0' & Y_COPY(14 downto 0)) when S = '1' AND V = '0' else
@@ -257,7 +258,6 @@ begin
          Y_VECTOR(15 downto 8) & Y_VECTOR(7) & Y_ABS_LSB(6 downto 0) when S = '1' AND V = '1' AND VECTOR_SIGN = "01" else
          Y_VECTOR(15) & Y_ABS_MSB(6 downto 0) & Y_VECTOR(7 downto 0) when S = '1' AND V = '1' AND VECTOR_SIGN = "10" else
          Y_VECTOR;
-         --Y_VECTOR(15) & Y_ABS_MSB(6 downto 0) & Y_VECTOR(7) & Y_ABS_LSB(6 downto 0) when S = '1' AND V = '1' AND VECTOR_SIGN = "11" AND A_IS_ZERO /= "11" AND B_IS_ZERO /= "11"
 --- ENTER STUDENT CODE ABOVE ---
 
 end dataflow;
