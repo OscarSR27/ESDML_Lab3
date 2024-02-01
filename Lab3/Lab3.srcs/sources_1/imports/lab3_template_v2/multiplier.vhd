@@ -98,6 +98,13 @@ architecture dataflow of multiplier is
 begin
 
 --- ENTER STUDENT CODE BELOW ---
+--- While the explanation and comments within the script are based on 8-bit inputs for both signed and 
+--- unsigned multiplication, the code is adaptable to handle 4-bit inputs. This is achieved by treating 
+--- each 4-bit input as part of separate 8-bit inputs, where for a given 8-bit input, the lower 4 bits (LSB) 
+--- are treated as Input0 and the upper 4 bits (MSB) as Input1, both for A and B inputs. This approach allows 
+--- the code to maintain its core functionality and structure while being flexible to accommodate different 
+--- input sizes.
+
 --- Flags:
 ---     perform signed multiplication with 8 bit 
 ---     numbers and corner conditions (0 and abs(128))
