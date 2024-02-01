@@ -38,7 +38,6 @@ end tb_multiplier;
 architecture behavioral of tb_multiplier is
     signal A, B : bit_vector(7 downto 0);
     signal S, V : bit;
-    signal test:bit;
     signal Y1, Y2 : bit_vector(15 downto 0);
 begin
 
@@ -53,8 +52,8 @@ begin
                 S <= '0'; V <= '1';
             when 2 =>
                 S <= '1'; V <= '0';
-            --when 3 =>
-                --S <= '1'; V <= '1';
+            when 3 =>
+                S <= '1'; V <= '1';
         end case;
             for AI in 0 to 2**8-1 loop
                 A <= bit_vector(to_unsigned(AI, 8));

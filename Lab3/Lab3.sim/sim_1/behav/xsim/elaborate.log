@@ -4,15 +4,4 @@ Running: C:/Xilinx/Vivado/2019.2/bin/unwrapped/win64.o/xelab.exe -wto f885318008
 Using 2 slave threads.
 Starting static elaboration
 Completed static elaboration
-Starting simulation data flow analysis
-Completed simulation data flow analysis
-Time Resolution for simulation is 1ps
-Compiling package std.standard
-Compiling package std.textio
-Compiling package ieee.std_logic_1164
-Compiling package ieee.numeric_bit
-Compiling architecture behavioral of entity xil_defaultlib.multiplier [multiplier_default_uniq_0]
-Compiling architecture dataflow of entity xil_defaultlib.adder [adder_default]
-Compiling architecture dataflow of entity xil_defaultlib.multiplier [multiplier_default_uniq_1]
-Compiling architecture behavioral of entity xil_defaultlib.tb_multiplier
-Built simulation snapshot tb_multiplier_behav
+INFO: [XSIM 43-4323] No Change in HDL. Linking previously generated obj files to create kernel
